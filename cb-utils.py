@@ -5,6 +5,7 @@ import cbpro
 import datetime, time
 
 public_client = cbpro.PublicClient()
+last_pub_execution = datetime.datetime.now() - datetime.timedelta(seconds=2)
 
 def history_data(pair, start=None, end=None, granularity=3600):
     data = []
@@ -14,10 +15,14 @@ def history_data(pair, start=None, end=None, granularity=3600):
         if diff > 300:
             data += history_data(pair, start + 300 * granularity, end, granularity)
             end = start + 300 * granularity
+    check_public_execution_limit()
     hist = public_client.get_product_historic_rates(pair.upper(), start=str(timestamp_to_iso8601(start)), end=str(timestamp_to_iso8601(end)), granularity=granularity)
-    for i in range(len(hist)):
-        date = datetime.datetime.utcfromtimestamp(hist[i][0]).strftime('%Y-%m-%d %I-%p')
-        data.append([date, pair.upper().replace('-', ''), hist[i][3], hist[i][2], hist[i][1], hist[i][4], round(hist[i][5], 2), round(hist[i][5] * (hist[i][3] + hist[i][4]) / 2, 2)])
+    try:
+        for i in range(len(hist)):
+            date = datetime.datetime.utcfromtimestamp(hist[i][0]).strftime('%Y-%m-%d %I-%p')
+            data.append([date, pair.upper().replace('-', ''), hist[i][3], hist[i][2], hist[i][1], hist[i][4], round(hist[i][5], 2), round(hist[i][5] * (hist[i][3] + hist[i][4]) / 2, 2)])
+    except:
+        print(hist)
     return data
 
 
@@ -62,6 +67,12 @@ def main(argv):
         history(pair, start, end, granularity)
     else:
         print('pair is', pair.upper())
+
+def check_public_execution_limit():
+    global last_pub_execution
+    if (datetime.datetime.now() - last_pub_execution).total_seconds() <= 1:
+        time.sleep(1)
+    last_pub_execution = datetime.datetime.now()
 
 def timestamp_to_iso8601(timestamp):
     if timestamp is None:
