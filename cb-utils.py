@@ -8,11 +8,13 @@ public_client = cbpro.PublicClient()
 
 def history_data(pair, start=None, end=None, granularity=3600):
     data = []
+    granularity = int(granularity)
     if start is not None and end is not None:
         diff = (end - start) / granularity
         if diff > 300:
-            data += history_data(pair, start, end - 300 * granularity, granularity)
-    hist = public_client.get_product_historic_rates(pair.upper(), start=start, end=end, granularity=granularity)
+            data += history_data(pair, start + 300 * granularity, end, granularity)
+            end = start + 300 * granularity
+    hist = public_client.get_product_historic_rates(pair.upper(), start=str(timestamp_to_iso8601(start)), end=str(timestamp_to_iso8601(end)), granularity=granularity)
     for i in range(len(hist)):
         date = datetime.datetime.utcfromtimestamp(hist[i][0]).strftime('%Y-%m-%d %I-%p')
         data.append([date, pair.upper().replace('-', ''), hist[i][3], hist[i][2], hist[i][1], hist[i][4], round(hist[i][5], 2), round(hist[i][5] * (hist[i][3] + hist[i][4]) / 2, 2)])
@@ -24,8 +26,6 @@ def history(pair, start=None, end=datetime.datetime.now(), granularity=3600):
         start = time.mktime(time.strptime(start, '%Y/%m/%d %H:%M'))
     if end is not None:
         end = time.mktime(time.strptime(end, '%Y/%m/%d %H:%M'))
-    print('start', start)
-    print('end', end)
     hist = history_data(pair, start, end, granularity)
     print(*['Date','Symbol','Open','High','Low','Close','Volume BTC','Volume USD'], sep=',')
     for i in range(len(hist)):
@@ -62,6 +62,11 @@ def main(argv):
         history(pair, start, end, granularity)
     else:
         print('pair is', pair.upper())
+
+def timestamp_to_iso8601(timestamp):
+    if timestamp is None:
+        return None
+    return datetime.datetime.utcfromtimestamp(timestamp).strftime('%Y-%m-%dT%H:%M:%S.%fZ')
 
 
 if __name__ == "__main__":
